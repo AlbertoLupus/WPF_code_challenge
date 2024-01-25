@@ -5,7 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:wscad_coding_challenge"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="WSCAD - Code Challenge"  WindowState="Maximized" Height="450" Width="800" Loaded="Window_Loaded">
+    <Grid Name="grid">
+        <Canvas Name="canvas" Background="White"
+            Height="{Binding ElementName=grid, Path=ActualHeight}" 
+            Width="{Binding ElementName=grid, Path=ActualWidth}" 
+            VerticalAlignment="Center" HorizontalAlignment="Center"/>
     </Grid>
 </Window>
