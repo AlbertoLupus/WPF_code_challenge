@@ -1,12 +1,6 @@
-﻿using System.Text;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace wscad_coding_challenge;
@@ -26,54 +20,90 @@ public partial class MainWindow : Window
         localCanvas = canvas;
     }
 
+    private Matrix WToDMatrix, DToWMatrix;
+    private void PrepareTransformations(
+        double wxmin, double wxmax, double wymin, double wymax,
+        double dxmin, double dxmax, double dymin, double dymax
+    )
+    {
+        WToDMatrix = Matrix.Identity;
+        WToDMatrix.Translate(-wxmin, -wymin);
+
+        var xscale = (dxmax - dxmin) / (wxmax - wxmin);
+        var yscale = (dymax - dymin) / (wymax - wymin);
+        var scale = Math.Abs(Math.Min(xscale, yscale));
+        // WToDMatrix.Scale(Math.Sign(xscale) * scale, Math.Sign(yscale) * scale);
+        WToDMatrix.Scale(xscale, yscale);
+
+        WToDMatrix.Translate(dxmin, dymin);
+
+        // map from device to world coordinates
+        DToWMatrix = WToDMatrix;
+        DToWMatrix.Invert();
+    }
+
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        const double wxmin = -10;
-        const double wxmax = 110;
-        const double wymin = -1;
-        const double wymax = 11;
-        // const double xstep = 10;
-        // const double ystep = 1;
-        // const double xtic = 5;
-        // const double ytic = 0.5;
+        var geometries = new ShapeFactoryJson("..\\..\\..\\content.json");
+        var group = new GeometryGroup();
+        group.Children = new GeometryCollection(geometries);
 
-        const double dmargin = 10;
+        const double dmargin = 0;
         double dxmin = dmargin;
         double dxmax = localCanvas.Width - dmargin;
         double dymin = dmargin;
         double dymax = localCanvas.Height - dmargin;
 
-        // prepare transformation matrices
+        double wxmin = group.Bounds.X;
+        double wxmax = wxmin + group.Bounds.Width;
+        double wymin = group.Bounds.Y;
+        double wymax = wymin + group.Bounds.Height;
+
         var w = new World2Device(wxmin, wxmax, wymin, wymax, dxmin, dxmax, dymax, dymin);
+        PrepareTransformations(wxmin, wxmax, wymin, wymax, dxmin, dxmax, dymax, dymin);
+        localCanvas.RenderTransform = new MatrixTransform(WToDMatrix);
 
-        // localCanvas.RenderTransform = new MatrixTransform(WToDMatrix);
+        DrawAxises(dxmin, dxmax, dymin, dymax, wxmin, wxmax, wymin, wymax);
 
-        // x-axis
-        var xaxis_geom = new GeometryGroup();
-        var p0 = new Point(wxmin, 0);
-        var p1 = new Point(wxmax, 0);
-        xaxis_geom.Children.Add(new LineGeometry(w.T(p0), w.T(p1)));
-
-        var xaxis_path = new Path
+        var path = new Path
         {
             StrokeThickness = 1,
             Stroke = Brushes.Black,
-            Data = xaxis_geom
+            Data = group
+        };
+        localCanvas.Children.Add(path);
+    }
+
+    private void DrawAxises(double dxmin, double dxmax, double dymin, double dymax, double wxmin, double wxmax, double wymin, double wymax)
+    {
+        // x-axis
+        var xaxis = new GeometryGroup();
+        var p0 = new Point(wxmin, 0);
+        var p1 = new Point(wxmax, 0);
+        xaxis.Children.Add(new LineGeometry(p0, p1));
+
+        var xscale = (dxmax - dxmin) / (wxmax - wxmin);
+        var yscale = (dymax - dymin) / (wymax - wymin);
+        var xaxis_path = new Path
+        {
+            StrokeThickness = 1.0 / yscale,
+            Stroke = Brushes.Black,
+            Data = xaxis
         };
 
         localCanvas.Children.Add(xaxis_path);
 
         // y-axis
-        var yaxis_geom = new GeometryGroup();
+        var yaxis = new GeometryGroup();
         var py0 = new Point(0, wymin);
         var py1 = new Point(0, wymax);
-        yaxis_geom.Children.Add(new LineGeometry(w.T(py0), w.T(py1)));
+        yaxis.Children.Add(new LineGeometry(py0, py1));
 
         var yaxis_path = new Path
         {
-            StrokeThickness = 1,
+            StrokeThickness = 1.0 / xscale,
             Stroke = Brushes.Black,
-            Data = yaxis_geom
+            Data = yaxis
         };
 
         localCanvas.Children.Add(yaxis_path);

@@ -3,7 +3,8 @@ using System.Windows.Media;
 
 public class World2Device
 {
-    private Matrix matrix;
+    public Matrix matrix { get; private set; }
+
     public World2Device(
         double wxmin, double wxmax, double wymin, double wymax, // world coordinates
         double dxmin, double dxmax, double dymin, double dymax  // device coordinates
