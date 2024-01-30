@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using System.Media;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
@@ -34,9 +35,38 @@ public class ShapeFactoryJson : IEnumerable<Geometry>
     }
 }
 
+public class PathFactoryJson : IEnumerable<System.Windows.Shapes.Path>
+{
+    readonly string path;
+
+    public PathFactoryJson(string path)
+    {
+        this.path = path;
+    }
+
+    public IEnumerator<System.Windows.Shapes.Path> GetEnumerator()
+    {
+        var options = new JsonSerializerOptions();
+        options.Converters.Add(new ShapeConverter());
+
+        var json = File.ReadAllText(path);
+        var shapes = JsonSerializer.Deserialize<List<ShapeRepresentationJson>>(json, options);
+        foreach (var shape in shapes ?? [])
+        {
+            yield return ((IShapeRepresentation)shape).Path();
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        throw new NotImplementedException();
+    }
+}
+
 public interface IShapeRepresentation
 {
     Geometry Geometry();
+    System.Windows.Shapes.Path Path();
 }
 
 // Non-nullable field must contain a non-null value when exiting constructor.
@@ -46,8 +76,15 @@ public class ShapeRepresentationJson
 {
     public string Type { get; set; }
     public string Color { get; set; }
-    protected Point PointFrom(string representation) => new Point(
+    protected Point PointFrom(string representation) => new(
         Double.Parse(representation.Split(";")[0]), Double.Parse(representation.Split(";")[1]));
+    protected Color ColorFrom(string representation) => new()
+    {
+        A = Byte.Parse(representation.Split(";")[0]),
+        R = Byte.Parse(representation.Split(";")[1]),
+        G = Byte.Parse(representation.Split(";")[2]),
+        B = Byte.Parse(representation.Split(";")[3])
+    };
 }
 
 public class SolidShapeRepresentationJson : ShapeRepresentationJson
@@ -61,6 +98,14 @@ public class LineRepresentationJson : ShapeRepresentationJson, IShapeRepresentat
     public string B { get; set; }
 
     public Geometry Geometry() => new LineGeometry(PointFrom(A), PointFrom(B));
+
+    public System.Windows.Shapes.Path Path() => new System.Windows.Shapes.Path()
+    {
+        StrokeThickness = 1,
+        Stroke = new SolidColorBrush(ColorFrom(Color)),
+        Fill = new SolidColorBrush(ColorFrom(Color)),
+        Data = Geometry()
+    };
 }
 
 public class CircleRepresentationJson : SolidShapeRepresentationJson, IShapeRepresentation
@@ -69,6 +114,14 @@ public class CircleRepresentationJson : SolidShapeRepresentationJson, IShapeRepr
     public double Radius { get; set; }
 
     public Geometry Geometry() => new EllipseGeometry(PointFrom(Center), Radius, Radius);
+
+    public System.Windows.Shapes.Path Path() => new System.Windows.Shapes.Path()
+    {
+        StrokeThickness = 1,
+        Stroke = new SolidColorBrush(ColorFrom(Color)),
+        Fill = Filled ? new SolidColorBrush(ColorFrom(Color)) : null,
+        Data = Geometry()
+    };
 }
 
 public class TriangleRepresentationJson : SolidShapeRepresentationJson, IShapeRepresentation
@@ -91,6 +144,14 @@ public class TriangleRepresentationJson : SolidShapeRepresentationJson, IShapeRe
 
         return result;
     }
+
+    public System.Windows.Shapes.Path Path() => new System.Windows.Shapes.Path()
+    {
+        StrokeThickness = 1,
+        Stroke = new SolidColorBrush(ColorFrom(Color)),
+        Fill = Filled ? new SolidColorBrush(ColorFrom(Color)) : null,
+        Data = Geometry()
+    };
 }
 
 // Non-nullable field must contain a non-null value when exiting constructor.

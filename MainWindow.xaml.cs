@@ -20,28 +20,6 @@ public partial class MainWindow : Window
         localCanvas = canvas;
     }
 
-    private Matrix WToDMatrix, DToWMatrix;
-    private void PrepareTransformations(
-        double wxmin, double wxmax, double wymin, double wymax,
-        double dxmin, double dxmax, double dymin, double dymax
-    )
-    {
-        WToDMatrix = Matrix.Identity;
-        WToDMatrix.Translate(-wxmin, -wymin);
-
-        var xscale = (dxmax - dxmin) / (wxmax - wxmin);
-        var yscale = (dymax - dymin) / (wymax - wymin);
-        var scale = Math.Abs(Math.Min(xscale, yscale));
-        // WToDMatrix.Scale(Math.Sign(xscale) * scale, Math.Sign(yscale) * scale);
-        WToDMatrix.Scale(xscale, yscale);
-
-        WToDMatrix.Translate(dxmin, dymin);
-
-        // map from device to world coordinates
-        DToWMatrix = WToDMatrix;
-        DToWMatrix.Invert();
-    }
-
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         var geometries = new ShapeFactoryJson("..\\..\\..\\content.json");
@@ -54,24 +32,21 @@ public partial class MainWindow : Window
         double dymin = dmargin;
         double dymax = localCanvas.Height - dmargin;
 
-        double wxmin = group.Bounds.X;
-        double wxmax = wxmin + group.Bounds.Width;
-        double wymin = group.Bounds.Y;
-        double wymax = wymin + group.Bounds.Height;
+        double strokeThickness = 0;
+        double wxmin = group.Bounds.X - strokeThickness;
+        double wxmax = wxmin + group.Bounds.Width + strokeThickness;
+        double wymin = group.Bounds.Y - strokeThickness;
+        double wymax = wymin + group.Bounds.Height + strokeThickness;
 
         var w = new World2Device(wxmin, wxmax, wymin, wymax, dxmin, dxmax, dymax, dymin);
-        PrepareTransformations(wxmin, wxmax, wymin, wymax, dxmin, dxmax, dymax, dymin);
-        localCanvas.RenderTransform = new MatrixTransform(WToDMatrix);
+        w.RenderTransform(localCanvas);
 
         DrawAxises(dxmin, dxmax, dymin, dymax, wxmin, wxmax, wymin, wymax);
 
-        var path = new Path
+        foreach (var path in new PathFactoryJson("..\\..\\..\\content.json"))
         {
-            StrokeThickness = 1,
-            Stroke = Brushes.Black,
-            Data = group
-        };
-        localCanvas.Children.Add(path);
+            localCanvas.Children.Add(path);
+        }
     }
 
     private void DrawAxises(double dxmin, double dxmax, double dymin, double dymax, double wxmin, double wxmax, double wymin, double wymax)
