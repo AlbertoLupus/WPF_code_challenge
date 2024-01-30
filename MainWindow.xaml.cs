@@ -20,11 +20,22 @@ public partial class MainWindow : Window
         localCanvas = canvas;
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    private void Canvas_SizeChanged(object sender, RoutedEventArgs e)
     {
-        var geometries = new ShapeFactoryJson("..\\..\\..\\content.json");
+        if (paths == null)
+        {
+            return;
+        }
+
+        AdaptToScreen();
+    }
+
+    private double strokeThickness = 1.0;
+
+    private void AdaptToScreen()
+    {
         var group = new GeometryGroup();
-        group.Children = new GeometryCollection(geometries);
+        group.Children = new GeometryCollection(paths.Select(x => x.Data));
 
         const double dmargin = 0;
         double dxmin = dmargin;
@@ -32,18 +43,26 @@ public partial class MainWindow : Window
         double dymin = dmargin;
         double dymax = localCanvas.Height - dmargin;
 
-        double strokeThickness = 0;
-        double wxmin = group.Bounds.X - strokeThickness;
+        double halfStrokeThickness = strokeThickness / 2;
+        double wxmin = group.Bounds.X - halfStrokeThickness;
         double wxmax = wxmin + group.Bounds.Width + strokeThickness;
-        double wymin = group.Bounds.Y - strokeThickness;
-        double wymax = wymin + group.Bounds.Height + strokeThickness;
+        double wymin = group.Bounds.Y - halfStrokeThickness;
+        double wymax = wymin + group.Bounds.Height + 2 * strokeThickness;
 
         var w = new World2Device(wxmin, wxmax, wymin, wymax, dxmin, dxmax, dymax, dymin);
         w.RenderTransform(localCanvas);
+    }
 
-        DrawAxises(dxmin, dxmax, dymin, dymax, wxmin, wxmax, wymin, wymax);
+    private List<Path>? paths;
 
-        foreach (var path in new PathFactoryJson("..\\..\\..\\content.json"))
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        paths = new PathFactoryJson("..\\..\\..\\content.json", strokeThickness).ToList();
+        AdaptToScreen();
+
+        // DrawAxises(dxmin, dxmax, dymin, dymax, wxmin, wxmax, wymin, wymax);
+
+        foreach (var path in paths)
         {
             localCanvas.Children.Add(path);
         }

@@ -13,14 +13,13 @@ public class World2Device
         matrix = Matrix.Identity;
         matrix.Translate(-wxmin, -wymin);                   // translate world origin
 
-        // var wmin = Math.Min(wxmin, wymin);
-        // var wmax = Math.Max(wxmax, wymax);
-        // var dmin = Math.Min(dxmin, dymin);
-        // var dmax = Math.Max(dxmax, dymax);
-        // var scale = (dmax - dmin) / (wmax - wmin);
         var xscale = (dxmax - dxmin) / (wxmax - wxmin);
         var yscale = (dymax - dymin) / (wymax - wymin);
-        matrix.Scale(xscale, yscale);                       // scale x and y-axis     
+        var proportionalScale = Math.Min(Math.Abs(xscale), Math.Abs(yscale));
+        matrix.Scale(
+            proportionalScale * Math.Sign(xscale),
+            proportionalScale * Math.Sign(yscale)
+        );                       // scale x and y-axis     
 
         matrix.Translate(dxmin, dymin);                     // translate device origin
     }

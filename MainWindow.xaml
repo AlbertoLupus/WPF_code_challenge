@@ -10,6 +10,7 @@
         <Canvas Name="canvas" Background="White"
             Height="{Binding ElementName=grid, Path=ActualHeight}" 
             Width="{Binding ElementName=grid, Path=ActualWidth}" 
-            VerticalAlignment="Center" HorizontalAlignment="Center"/>
+            VerticalAlignment="Center" HorizontalAlignment="Center"
+            SizeChanged="Canvas_SizeChanged"/>
     </Grid>
 </Window>

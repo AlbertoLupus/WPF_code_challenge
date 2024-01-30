@@ -1,47 +1,19 @@
 using System.Collections;
-using System.IO;
-using System.Media;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
-public class ShapeFactoryJson : IEnumerable<Geometry>
-{
-    readonly string path;
-
-    public ShapeFactoryJson(string path)
-    {
-        this.path = path;
-    }
-
-    public IEnumerator<Geometry> GetEnumerator()
-    {
-        var options = new JsonSerializerOptions();
-        options.Converters.Add(new ShapeConverter());
-
-        var json = File.ReadAllText(path);
-        var shapes = JsonSerializer.Deserialize<List<ShapeRepresentationJson>>(json, options);
-        foreach (var shape in shapes ?? [])
-        {
-            yield return ((IShapeRepresentation)shape).Geometry();
-        }
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        throw new NotImplementedException();
-    }
-}
-
 public class PathFactoryJson : IEnumerable<System.Windows.Shapes.Path>
 {
     readonly string path;
+    double strokeThickness;
 
-    public PathFactoryJson(string path)
+    public PathFactoryJson(string path, double strokeThickness)
     {
         this.path = path;
+        this.strokeThickness = strokeThickness;
     }
 
     public IEnumerator<System.Windows.Shapes.Path> GetEnumerator()
@@ -49,11 +21,11 @@ public class PathFactoryJson : IEnumerable<System.Windows.Shapes.Path>
         var options = new JsonSerializerOptions();
         options.Converters.Add(new ShapeConverter());
 
-        var json = File.ReadAllText(path);
+        var json = System.IO.File.ReadAllText(path);
         var shapes = JsonSerializer.Deserialize<List<ShapeRepresentationJson>>(json, options);
         foreach (var shape in shapes ?? [])
         {
-            yield return ((IShapeRepresentation)shape).Path();
+            yield return ((IShapeRepresentation)shape).Path(strokeThickness);
         }
     }
 
@@ -65,8 +37,7 @@ public class PathFactoryJson : IEnumerable<System.Windows.Shapes.Path>
 
 public interface IShapeRepresentation
 {
-    Geometry Geometry();
-    System.Windows.Shapes.Path Path();
+    System.Windows.Shapes.Path Path(double strokeThickness);
 }
 
 // Non-nullable field must contain a non-null value when exiting constructor.
@@ -90,6 +61,8 @@ public class ShapeRepresentationJson
 public class SolidShapeRepresentationJson : ShapeRepresentationJson
 {
     public bool Filled { get; set; }
+    public Brush Stroke => new SolidColorBrush(ColorFrom(Color));
+    public Brush? Fill => Filled ? new SolidColorBrush(ColorFrom(Color)) : null;
 }
 
 public class LineRepresentationJson : ShapeRepresentationJson, IShapeRepresentation
@@ -97,13 +70,12 @@ public class LineRepresentationJson : ShapeRepresentationJson, IShapeRepresentat
     public string A { get; set; }
     public string B { get; set; }
 
-    public Geometry Geometry() => new LineGeometry(PointFrom(A), PointFrom(B));
+    private Geometry Geometry() => new LineGeometry(PointFrom(A), PointFrom(B));
 
-    public System.Windows.Shapes.Path Path() => new System.Windows.Shapes.Path()
+    public Path Path(double strokeThickness) => new()
     {
-        StrokeThickness = 1,
+        StrokeThickness = strokeThickness,
         Stroke = new SolidColorBrush(ColorFrom(Color)),
-        Fill = new SolidColorBrush(ColorFrom(Color)),
         Data = Geometry()
     };
 }
@@ -113,13 +85,13 @@ public class CircleRepresentationJson : SolidShapeRepresentationJson, IShapeRepr
     public string Center { get; set; }
     public double Radius { get; set; }
 
-    public Geometry Geometry() => new EllipseGeometry(PointFrom(Center), Radius, Radius);
+    private Geometry Geometry() => new EllipseGeometry(PointFrom(Center), Radius, Radius);
 
-    public System.Windows.Shapes.Path Path() => new System.Windows.Shapes.Path()
+    public Path Path(double strokeThickness) => new()
     {
-        StrokeThickness = 1,
-        Stroke = new SolidColorBrush(ColorFrom(Color)),
-        Fill = Filled ? new SolidColorBrush(ColorFrom(Color)) : null,
+        StrokeThickness = strokeThickness,
+        Stroke = Stroke,
+        Fill = Fill,
         Data = Geometry()
     };
 }
@@ -131,7 +103,7 @@ public class TriangleRepresentationJson : SolidShapeRepresentationJson, IShapeRe
     public string C { get; set; }
 
     //https://learn.microsoft.com/en-us/dotnet/desktop/wpf/graphics-multimedia/how-to-create-a-shape-using-a-streamgeometry?view=netframeworkdesktop-4.8
-    public Geometry Geometry()
+    private Geometry Geometry()
     {
         var result = new StreamGeometry();
         using (StreamGeometryContext ctx = result.Open())
@@ -145,11 +117,11 @@ public class TriangleRepresentationJson : SolidShapeRepresentationJson, IShapeRe
         return result;
     }
 
-    public System.Windows.Shapes.Path Path() => new System.Windows.Shapes.Path()
+    public Path Path(double strokeThickness) => new()
     {
-        StrokeThickness = 1,
-        Stroke = new SolidColorBrush(ColorFrom(Color)),
-        Fill = Filled ? new SolidColorBrush(ColorFrom(Color)) : null,
+        StrokeThickness = strokeThickness,
+        Stroke = Stroke,
+        Fill = Fill,
         Data = Geometry()
     };
 }
