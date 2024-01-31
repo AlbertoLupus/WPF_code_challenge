@@ -13,11 +13,13 @@ public partial class MainWindow : Window
     // alias to Canvas element from *.xaml to prevent multiple error messages in Visual Code:
     // The name 'canGraph' does not exist in the currnet context (CS0103)
     private Canvas localCanvas;
+    private string? path;
 
-    public MainWindow()
+    public MainWindow(string? path)
     {
         InitializeComponent();
         localCanvas = canvas;
+        this.path = path;
     }
 
     private void Canvas_SizeChanged(object sender, RoutedEventArgs e)
@@ -57,7 +59,13 @@ public partial class MainWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        paths = new PathFactoryJson("..\\..\\..\\content.json", strokeThickness).ToList();
+        // var path = "..\\..\\..\\content.json";
+        if (path == null)
+        {
+            return;
+        }
+
+        paths = new PathFactoryJson(path, strokeThickness).ToList();
         AdaptToScreen();
 
         // DrawAxises(dxmin, dxmax, dymin, dymax, wxmin, wxmax, wymin, wymax);
